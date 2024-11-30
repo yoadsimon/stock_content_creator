@@ -1,0 +1,4 @@
+gTTS==2.2.3
+moviepy==1.0.3
+pydub==0.25.1
+pygame==2.6.1
