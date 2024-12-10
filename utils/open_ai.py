@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from inputs.video_map import VIDEO_DESCRIPTION_MAP
+from utils.utils import fix_video_name
 
 load_dotenv()
 
@@ -70,6 +72,7 @@ def summarize_with_open_ai(text, link, company_name, stock_symbol):
     summary = client.generate_text(prompt)
     return summary
 
+
 def generate_stock_opening_analysis(text, company_name, stock_symbol):
     client = OpenAIClient()
 
@@ -89,6 +92,87 @@ def generate_stock_opening_analysis(text, company_name, stock_symbol):
     results = client.generate_text(prompt)
     return results
 
+
+def add_SSML_tags(text, company_name, stock_symbol):
+    # TODO - Implement SSML tagging better
+    client = OpenAIClient()
+
+    prompt = (
+        f"You are a text-to-speech expert. Enhance the given text with SSML "
+        f"tags, ensuring compliance with Amazon Polly's supported features. "
+        f"Use pauses and adjust the speaking rate and volume as necessary for "
+        f"an engaging audio presentation of a financial report on {company_name} "
+        f"with stock symbol {stock_symbol}. SSML should include only supported tags.\n\n"
+        f"Text:\n{text}\n"
+        f"return ONLY the given text enhanced with SSML"
+
+    )
+
+    ssml_text = client.generate_text(prompt)
+    ssml_text = ssml_text.replace('```', '').replace('xml', '').strip()
+    return ssml_text
+
+
+def match_text_to_videos(text) -> dict:
+    video_description_map = VIDEO_DESCRIPTION_MAP  # This dictionary should be pre-defined
+    client = OpenAIClient()
+
+    prompt = f"""
+    You are given a mapping of video descriptions and their corresponding video file names.
+    Here is the video description map: {video_description_map}
+
+    Your task is to analyze the following text and segment it into parts such that each part can be associated
+    with a relevant video whose description closely matches the content or context of that text segment.
+
+    Text:
+    {text}
+
+    Steps to follow:
+    1. Break down the text into meaningful parts that can stand alone in terms of their themes or topics.
+    2. For each part, identify and match it with a video whose description from the description map holds the most relevance.
+    3. Return the results as a Python dictionary where each key is an EXACT segment of the original text, 
+       and the corresponding value is the name of the video file that best matches it.
+    """
+
+    response = client.generate_text(prompt)
+    start = response.find("{")
+    end = response.find("}")
+    response = response[start:end + 1]
+
+    try:
+        video_mapping = eval(response)
+    except SyntaxError as e:
+        raise ValueError(f"Error parsing response: {e}")
+    for text, video_name in video_mapping.items():
+        if video_name is None:
+            import random
+            random_number = random.randint(1, 2)
+            if random_number == 1:
+                video_mapping[text] = "Interactive_Trading_Screen.mp4"
+            else:
+                video_mapping[text] = "Stock_Ticker_Grid.mp4"
+
+    return video_mapping
+
+
+def match_text_to_video(text) -> str:
+    client = OpenAIClient()
+
+    prompt = f"""
+    You are given a mapping of video descriptions and their corresponding video file names.
+    Here is the video description map: {VIDEO_DESCRIPTION_MAP}
+
+    Your task is to analyze the following sentence and find the video whose description from the description map holds the most relevance.
+
+    Sentence: "{text}"
+
+    Return ONLY the name of the video file that best matches the sentence.
+    """
+
+    response = client.generate_text(prompt)
+    response = fix_video_name(response)
+    return response
+
 # if __name__ == "__main__":
-#     client = OpenAIClient()
-#     print(client.generate_text("What is 2 + 2?"))
+#     text = "Meanwhile, despite competitive challenges and overall market declines, analysts highlight NVIDIA's strong position in the AI chip market, presenting a mixed sentiment for its future stock performance."
+#     print(match_text_to_video(text))
