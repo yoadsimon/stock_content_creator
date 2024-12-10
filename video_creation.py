@@ -24,7 +24,7 @@ def match_text_part_to_sentence(text_part, sentences_timings):
     return sentence, next_sentence
 
 
-def load_background_clips(background_videos, total_audio_duration, part_of_text_map, sentences_timings):
+def load_background_clips(background_videos, total_audio_duration, sentences_list_with_timings):
     if background_videos is None:
         return None, []  # Return an empty list for bg_videos
 
@@ -33,7 +33,9 @@ def load_background_clips(background_videos, total_audio_duration, part_of_text_
     current_duration = 0
 
     # Iterate over each text segment and its corresponding video from the map
-    for text_part, video_name in part_of_text_map.items():
+    for sentence in sentences_list_with_timings:
+        text_part = sentence['sentence']
+        video_name = sentence['video_name']
         if current_duration >= total_audio_duration:
             break
 
@@ -51,17 +53,13 @@ def load_background_clips(background_videos, total_audio_duration, part_of_text_
             print(f"Video reader is None for video '{file_name}'. Skipping.")
             continue
 
-        sentence, next_sentence = match_text_part_to_sentence(text_part, sentences_timings)
         if sentence is None:
             print(f"Could not find a matching sentence for text part: {text_part}")
             continue  # Do not close bg_video here
 
-        start_time = sentence['start']
-
-        if next_sentence is not None:
-            clip_duration = next_sentence['start'] - start_time
-        else:
-            clip_duration = sentence['end'] - start_time
+        start_time_in_seconds = sentence['start']/1000
+        end_time_in_seconds = sentence['end']/1000
+        clip_duration = end_time_in_seconds - start_time_in_seconds
 
         video_duration = bg_video.duration
 
@@ -116,30 +114,31 @@ def load_background_clips(background_videos, total_audio_duration, part_of_text_
         return None, bg_videos
 
 
-def generate_text_clips(word_timings):
+def generate_text_clips(sentences_list_with_timings):
     clips = []
-    for timing in word_timings:
-        word = timing['word']
-        start_time = timing['start']
-        duration = timing['end'] - timing['start']
-        text_clip = TextClip(word, fontsize=70, color='white', size=(640, 480), method='caption', font='Arial')
-        text_clip = (text_clip.set_start(start_time)
-                     .set_duration(duration)
-                     .set_pos('center'))
-        clips.append(text_clip)
+    for sentence in sentences_list_with_timings:
+        for timing in sentence['words_in_sentence']:
+            word = timing['word']
+            start_time_in_seconds = timing['start']/1000
+            end_time_in_seconds = timing['end']/1000
+            duration = end_time_in_seconds - start_time_in_seconds
+            text_clip = TextClip(word, fontsize=70, color='white', size=(640, 480), method='caption', font='Arial')
+            text_clip = (text_clip.set_start(start_time_in_seconds)
+                         .set_duration(duration)
+                         .set_pos('center'))
+            clips.append(text_clip)
     return clips
 
 
-def create_video(audio_path, video_path, word_timings, background_videos, part_of_text_map, sentences_timings):
+def create_video(audio_path, video_path, sentences_list_with_timings, background_videos):
     audio = load_audio(audio_path)
     total_audio_duration = audio.duration
 
     background, bg_videos = load_background_clips(background_videos=background_videos,
                                                   total_audio_duration=total_audio_duration,
-                                                  part_of_text_map=part_of_text_map,
-                                                  sentences_timings=sentences_timings)
+                                                  sentences_list_with_timings=sentences_list_with_timings)
 
-    clips = generate_text_clips(word_timings)
+    clips = generate_text_clips(sentences_list_with_timings)
 
     video = CompositeVideoClip([background] + clips) if background else CompositeVideoClip(clips)
     video = video.set_audio(audio)

@@ -1,11 +1,10 @@
-import time
 import yfinance as yf
 import datetime
 import asyncio
 import logging
 from tqdm import tqdm
 from utils.consts import MARKET_TIME_ZONE
-from utils.open_ai import generate_stock_opening_analysis, summarize_with_open_ai, match_text_to_video
+from utils.open_ai import generate_stock_opening_analysis, summarize_with_open_ai
 from utils.stock_market_time import StockMarketTime
 from utils.utils import get_text_by_url, save_to_temp_file, read_temp_file, setup_logging
 
@@ -70,8 +69,9 @@ def get_news_data(company_name: str, stock_symbol: str, stock_market_time: Stock
         published_timestamp = news_item['providerPublishTime']
         published_time = datetime.datetime.fromtimestamp(published_timestamp, MARKET_TIME_ZONE)
 
-        # if not (stock_market_time.last_time_closed < published_time < stock_market_time.next_time_open):
-        #     continue
+        if not stock_market_time.is_mock and not (
+                stock_market_time.last_time_closed < published_time < stock_market_time.next_time_open):
+            continue
 
         url = news_item.get('link')
         if not url:

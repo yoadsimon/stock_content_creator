@@ -1,9 +1,6 @@
 import os
-import random
-
 from dotenv import load_dotenv
 from openai import OpenAI
-
 from inputs.video_map import VIDEO_DESCRIPTION_MAP
 
 load_dotenv()
@@ -115,7 +112,7 @@ def add_SSML_tags(text, company_name, stock_symbol):
     return ssml_text
 
 
-def match_text_to_video(text):
+def match_text_to_videos(text) -> dict:
     video_description_map = VIDEO_DESCRIPTION_MAP  # This dictionary should be pre-defined
     client = OpenAIClient()
 
@@ -157,6 +154,31 @@ def match_text_to_video(text):
     return video_mapping
 
 
-if __name__ == "__main__":
-    text = ""
-    print(match_text_to_video(text))
+def match_text_to_video(text) -> str:
+    video_description_map = VIDEO_DESCRIPTION_MAP
+    client = OpenAIClient()
+
+    prompt = f"""
+    You are given a mapping of video descriptions and their corresponding video file names.
+    Here is the video description map: {video_description_map}
+
+    Your task is to analyze the following sentence and find the video whose description from the description map holds the most relevance.
+
+    Sentence: "{text}"
+
+    Return ONLY the name of the video file that best matches the sentence.
+    """
+
+    response = client.generate_text(prompt)
+    if not response:
+        import random
+        random_number = random.randint(1, 2)
+        if random_number == 1:
+            response = "Interactive_Trading_Screen.mp4"
+        else:
+            response = "Stock_Ticker_Grid.mp4"
+    return response
+
+# if __name__ == "__main__":
+#     text = "Meanwhile, despite competitive challenges and overall market declines, analysts highlight NVIDIA's strong position in the AI chip market, presenting a mixed sentiment for its future stock performance."
+#     print(match_text_to_video(text))

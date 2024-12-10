@@ -6,8 +6,10 @@ from utils.consts import MARKET_TIME_ZONE
 class StockMarketTime:
     def __init__(self, mock_data_input_now=None):
         self.now = datetime.datetime.now(MARKET_TIME_ZONE)
+        self.is_mock = False
         if mock_data_input_now:
             self.now = mock_data_input_now
+            self.is_mock = True
         self.last_time_closed = self.get_last_time_closed_stock_market()
         self.next_time_open = self.get_next_time_open_stock_market()
         self.is_closed = self.next_time_open > self.last_time_closed
