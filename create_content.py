@@ -5,7 +5,7 @@ import asyncio
 import logging
 from tqdm import tqdm
 from utils.consts import MARKET_TIME_ZONE
-from utils.open_ai import generate_stock_opening_analysis, summarize_with_open_ai
+from utils.open_ai import generate_stock_opening_analysis, summarize_with_open_ai, match_text_to_video
 from utils.stock_market_time import StockMarketTime
 from utils.utils import get_text_by_url, save_to_temp_file, read_temp_file, setup_logging
 
@@ -27,6 +27,7 @@ def create_content(use_temp_file=False, mock_data_input_now=None) -> str:
         save_to_temp_file(stock_info, file_name)
 
     result = generate_stock_opening_analysis(stock_info, company_name, stock_symbol)
+    # result_with_SSML = add_SSML_tags(result, company_name, stock_symbol)
     return result
 
 
@@ -69,8 +70,8 @@ def get_news_data(company_name: str, stock_symbol: str, stock_market_time: Stock
         published_timestamp = news_item['providerPublishTime']
         published_time = datetime.datetime.fromtimestamp(published_timestamp, MARKET_TIME_ZONE)
 
-        if not (stock_market_time.last_time_closed < published_time < stock_market_time.next_time_open):
-            continue
+        # if not (stock_market_time.last_time_closed < published_time < stock_market_time.next_time_open):
+        #     continue
 
         url = news_item.get('link')
         if not url:
@@ -108,9 +109,17 @@ def get_news_data(company_name: str, stock_symbol: str, stock_market_time: Stock
 
     return news_data
 
-# # for testing purposes
+# for testing purposes
 # if __name__ == "__main__":
-#     now = datetime.datetime.now(MARKET_TIME_ZONE)
-#     mock_data_input_now = now.replace(hour=9, minute=0, second=0, microsecond=0)
-#     r = create_content(mock_data_input_now=mock_data_input_now)
+#     # now = datetime.datetime.now(MARKET_TIME_ZONE)
+#     # mock_data_input_now = now.replace(hour=9, minute=0, second=0, microsecond=0)
+#     text = create_content(use_temp_file=True)
+#     text = text.replace("*", "").replace('"', "'")
+#
+#     r = match_text_to_video(text)
+#     text2 = text
+#     for key, value in r.items():
+#         text2 = text2.replace(key, "")
+#     print(f"Text: {text2}")
+#
 #     print(r)

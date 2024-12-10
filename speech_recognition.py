@@ -4,6 +4,7 @@ import wave
 import json
 from vosk import Model, KaldiRecognizer
 import contextlib
+import difflib
 
 
 @contextlib.contextmanager
@@ -63,3 +64,47 @@ def get_word_timings(audio_path, model_path):
 
     words = [{'word': w['word'], 'start': w['start'], 'end': w['end']} for w in word_timings]
     return words
+
+
+def get_sentences_timings(audio_path, model_path, sentences: list[str]):
+    words = get_word_timings(audio_path, model_path)
+    recognized_words = [w['word'].strip().lower().replace("*", "").replace('"', "'") for w in words]
+    sentence_timings = []
+    n = len(recognized_words)
+    for sentence in sentences:
+        sentence_words = sentence.strip().split()
+        sentence_words = [w.strip().lower().replace("*", "").replace('"', "'") for w in sentence_words]
+        m = len(sentence_words)
+        max_mismatches = 9 # Allows for some mismatches
+        best_ratio = 0
+        best_start = None
+        best_end = None
+        # Adjust window sizes to account for insertions/deletions
+        for window_size in range(m - max_mismatches, m + max_mismatches + 1):
+            if window_size <= 0:
+                continue
+            for i in range(n - window_size + 1):
+                window_words = recognized_words[i:i + window_size]
+                # Compute matching ratio
+                s = difflib.SequenceMatcher(None, sentence_words, window_words)
+                ratio = s.ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_start = i
+                    best_end = i + window_size - 1
+        if best_ratio > 0.6:  # Threshold for accepting a match
+            start_time = words[best_start]['start']
+            end_time = words[best_end]['end']
+            sentence_timings.append({
+                'sentence': sentence,
+                'start': start_time,
+                'end': end_time
+            })
+        else:
+            # Could not find a good match
+            sentence_timings.append({
+                'sentence': sentence,
+                'start': None,
+                'end': None
+            })
+    return sentence_timings
