@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from inputs.video_map import VIDEO_DESCRIPTION_MAP
+from utils.utils import fix_video_name
 
 load_dotenv()
 
@@ -155,12 +156,11 @@ def match_text_to_videos(text) -> dict:
 
 
 def match_text_to_video(text) -> str:
-    video_description_map = VIDEO_DESCRIPTION_MAP
     client = OpenAIClient()
 
     prompt = f"""
     You are given a mapping of video descriptions and their corresponding video file names.
-    Here is the video description map: {video_description_map}
+    Here is the video description map: {VIDEO_DESCRIPTION_MAP}
 
     Your task is to analyze the following sentence and find the video whose description from the description map holds the most relevance.
 
@@ -170,13 +170,7 @@ def match_text_to_video(text) -> str:
     """
 
     response = client.generate_text(prompt)
-    if not response:
-        import random
-        random_number = random.randint(1, 2)
-        if random_number == 1:
-            response = "Interactive_Trading_Screen.mp4"
-        else:
-            response = "Stock_Ticker_Grid.mp4"
+    response = fix_video_name(response)
     return response
 
 # if __name__ == "__main__":

@@ -1,8 +1,12 @@
 import os
 import logging
+import random
 import time
 
 from playwright.async_api import async_playwright
+
+from inputs.video_map import VIDEO_DESCRIPTION_MAP
+
 
 async def open_finance_yahoo(p):
     base_url = "https://finance.yahoo.com/"
@@ -18,6 +22,7 @@ async def open_finance_yahoo(p):
         print(f"No consent buttons found or error clicking: {e}")
     return browser, page
 
+
 async def get_text_from_url(url, page):
     try:
         await page.goto(url)
@@ -31,6 +36,7 @@ async def get_text_from_url(url, page):
     except Exception as e:
         print(f"Error fetching text from URL {url}: {e}")
         return None
+
 
 async def get_text_by_url(urls):
     text_by_link = {}
@@ -79,3 +85,14 @@ def setup_logging():
         format='%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    pass
+
+
+def fix_video_name(name):
+    if not name.endswith(".mp4"):
+        name += ".mp4"
+    if name not in VIDEO_DESCRIPTION_MAP.values():
+        name = None
+    if not name:
+        return random.choice(["Interactive_Trading_Screen.mp4", "Stock_Ticker_Grid.mp4"])
+    return name
